@@ -4,6 +4,8 @@
 #include "all.h"
 
 #include <ctype.h>
+#include <math.h>
+#include <stdio.h>
 
 static
 c3_y to_digit(c3_y tig)
@@ -257,6 +259,85 @@ _print_ud(u3_atom ud)
   return list;
 }
 
+/* unsigned integer base-10 logarithm */
+/* yields 1 for zero but the point is to get at least 1-width for characters */
+static
+c3_w
+log10_(mpz_t x)
+{
+  c3_w order = 0;
+  mpz_t zero_mp;
+  mpz_init_set_ui(zero_mp, 0);
+  mpz_t ten_mp;
+  mpz_init_set_ui(ten_mp, 10);
+  do
+  {
+    mpz_tdiv_q(x, x, ten_mp);
+    order++;
+  }
+  while(mpz_cmp(x, zero_mp));
+
+  mpz_clear(zero_mp);
+  mpz_clear(ten_mp);
+  return order;
+}
+
+static
+u3_noun
+_print_ud_atom(u3_atom ud)
+{
+  mpz_t ud_mp, ud_mp_n;
+  u3r_mp(ud_mp, ud);
+  u3r_mp(ud_mp_n, ud);
+  mpz_t zero_mp;
+  mpz_init_set_ui(zero_mp, 0);
+
+  // allocate string with some breathing room for "."s, okay if too long
+  c3_w n = floor(log10_(ud_mp_n));
+  n = (4 * n) / 3 + 1;
+  c3_y* result = (c3_y*)u3a_malloc(n*sizeof(c3_y));
+  memset(result, 0, n);
+  c3_y* digit  = (c3_y*)u3a_malloc(sizeof(c3_y));
+
+  // number of characters printed "between" periods.
+  c3_i between = 0;
+  c3_i counter = 0;
+
+  do
+  {
+    if (between == 3) {
+      result[counter] = '.';
+      between = 0;
+      counter++;
+    }
+
+    // convert digit to character rep and write into c-string
+    sprintf((char*)digit, "%lu\n\r", mpz_tdiv_q_ui(ud_mp, ud_mp, 10));
+    result[counter] = digit[0];
+
+    between++;
+    counter++;
+  } while(mpz_cmp(ud_mp, zero_mp) > 0);
+  result[counter] = '\0';
+
+  // flip back around
+  c3_y* result_ = (c3_y*)u3a_malloc(n*sizeof(c3_y));
+  int t = 0;
+  for (t = 0; t < counter; t++)
+  {
+    result_[t] = result[counter-t-1];
+  }
+  result_[counter] = '\0';
+
+  mpz_clear(ud_mp);
+  mpz_clear(zero_mp);
+  u3_noun final = u3i_bytes(counter, (c3_y*)result_);
+  u3a_free(result);
+  u3a_free(result_);
+  u3a_free(digit);
+  return final;
+}
+
 static
 u3_noun
 _print_uv(u3_atom uv)
@@ -365,7 +446,10 @@ u3we_scot(u3_noun cor)
       break;
 
     case c3__ud:
-      tape = _print_ud(atom);
+      //tape = _print_ud(atom);
+      //fprintf(stderr,"\r\nud\r\n");
+      tape = _print_ud_atom(atom);
+      return tape;
       break;
 
     case c3__uv:
