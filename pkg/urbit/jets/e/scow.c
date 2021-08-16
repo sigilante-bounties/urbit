@@ -531,12 +531,12 @@ u3we_scot(u3_noun cor)
   u3_noun result;
   switch (mod) {
     case c3__da:
-      //return u3_none;
+      return u3_none;
       result = _print_da(cor, atom);
       break;
 
     case 'p':
-      return u3_none;
+      //return u3_none;
       result = _print_p(cor, atom);
       break;
 
