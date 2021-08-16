@@ -541,17 +541,14 @@ u3we_scot(u3_noun cor)
       break;
 
     case c3__ud:
-      return u3_none;
       result = _print_ud_atom(atom);
       return result;
 
     case c3__uv:
-      return u3_none;
       result = _print_uv_atom(atom);
       return result;
 
     case c3__uw:
-      return u3_none;
       result = _print_uw_atom(atom);
       return result;
 
