@@ -503,6 +503,7 @@ u3we_scow(u3_noun cor)
       return _print_p(cor, atom);
 
     case c3__ud:
+      // TODO convert to make tape from cord version
       return _print_ud(atom);
 
     case c3__uv:
@@ -527,36 +528,41 @@ u3we_scot(u3_noun cor)
     return u3m_bail(c3__exit);
   }
 
-  u3_noun tape;
+  u3_noun result;
   switch (mod) {
     case c3__da:
-      tape = _print_da(cor, atom);
+      return u3_none;
+      result = _print_da(cor, atom);
       break;
 
     case 'p':
-      tape = _print_p(cor, atom);
+      return u3_none;
+      result = _print_p(cor, atom);
       break;
 
     case c3__ud:
-      tape = _print_ud_atom(atom);
-      return tape;
+      return u3_none;
+      result = _print_ud_atom(atom);
+      return result;
 
     case c3__uv:
-      tape = _print_uv_atom(atom);
-      return tape;
+      return u3_none;
+      result = _print_uv_atom(atom);
+      return result;
 
     case c3__uw:
-      tape = _print_uw_atom(atom);
-      return tape;
+      return u3_none;
+      result = _print_uw_atom(atom);
+      return result;
 
     default:
       return u3_none;
   }
 
-  if (tape == u3_none) {
-    return tape;
+  if (result == u3_none) {
+    return result;
   }
-  u3_noun ret = u3qc_rap(3, tape);
-  u3z(tape);
+  u3_noun ret = u3qc_rap(3, result);
+  u3z(result);
   return ret;
 }
