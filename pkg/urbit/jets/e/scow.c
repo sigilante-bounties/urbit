@@ -7,29 +7,31 @@
 #include <math.h>
 #include <stdio.h>
 
+/* hardcoded ASCII values to hew to base-10, base-16, & base-32 @uv reqs */
 static
 c3_y to_digit(c3_y tig)
 {
   if (tig >= 10) {
-    return 87 + tig;
+    return 87 + tig;  // 87 + 10 = 'a' etc.
   } else {
-    return '0' + tig;
+    return '0' + tig; // raw ASCII digit
   }
 }
 
+/* hardcoded ASCII values to hew to 64-bit @uw requirements */
 static
 c3_y to_w_digit(c3_y tig)
 {
   if (tig == 63) {
-    return '~';
+    return '~';           // use `~` for 63 (e.g., 63 = 0w~)
   } else if (tig == 62) {
-    return '-';
+    return '-';           // use '-' for 62
   } else if (tig >= 36) {
-    return 29 + tig;
+    return 29 + tig;      // 29 + 36 = 'A' etc.
   } else if (tig >= 10) {
-    return 87 + tig;
+    return 87 + tig;      // 87 + 10 = 'a' etc.
   } else {
-    return '0' + tig;
+    return '0' + tig;     // raw ASCII digit
   }
 }
 
@@ -259,45 +261,52 @@ _print_ud(u3_atom ud)
   return list;
 }
 
-/* unsigned integer base-10 logarithm */
-/* yields 1 for zero but the point is to get at least 1-width for characters */
+/* approximate length in base-10 of unsigned integer */
 static
 c3_w
-log10_(mpz_t x)
+_length_approx(mpz_t x)
 {
   c3_w order = 0;
-  mpz_t zero_mp;
-  mpz_init_set_ui(zero_mp, 0);
-  mpz_t ten_mp;
-  mpz_init_set_ui(ten_mp, 10);
   do
   {
-    mpz_tdiv_q(x, x, ten_mp);
+    mpz_tdiv_q_ui(x, x, 10);
     order++;
   }
-  while(mpz_cmp(x, zero_mp));
+  while(mpz_cmp_ui(x, 0) > 0);
 
-  mpz_clear(zero_mp);
-  mpz_clear(ten_mp);
   return order;
+}
+
+/* in-place c-string reversal */
+static
+void
+_reverse_cstr(c3_y* str, c3_i len)
+{
+  c3_i i = len - 1;
+  c3_i j = 0;
+  c3_i tmp;
+
+  while(i > j)
+  {
+    tmp = str[i];
+    str[i--] = str[j];
+    str[j++] = tmp;
+  }
 }
 
 static
 u3_noun
 _print_ud_atom(u3_atom ud)
 {
-  mpz_t ud_mp, ud_mp_n;
+  mpz_t ud_mp;
   u3r_mp(ud_mp, ud);
-  u3r_mp(ud_mp_n, ud);
-  mpz_t zero_mp;
-  mpz_init_set_ui(zero_mp, 0);
 
   // allocate string with some breathing room for "."s, okay if too long
-  c3_w n = floor(log10_(ud_mp_n));
+  c3_w n = floor(_length_approx(ud_mp));
+  u3r_mp(ud_mp, ud); // new copy b/c _length_approx is destructive
   n = (4 * n) / 3 + 1;
   c3_y* result = (c3_y*)u3a_malloc(n*sizeof(c3_y));
-  memset(result, 0, n);
-  c3_y* digit  = (c3_y*)u3a_malloc(sizeof(c3_y));
+  c3_y digit;
 
   // number of characters printed "between" periods.
   c3_i between = 0;
@@ -312,29 +321,20 @@ _print_ud_atom(u3_atom ud)
     }
 
     // convert digit to character rep and write into c-string
-    sprintf((char*)digit, "%lu\n\r", mpz_tdiv_q_ui(ud_mp, ud_mp, 10));
-    result[counter] = digit[0];
+    digit = '0' + mpz_tdiv_q_ui(ud_mp, ud_mp, 10);
+    result[counter] = digit;
 
     between++;
     counter++;
-  } while(mpz_cmp(ud_mp, zero_mp) > 0);
-  result[counter] = '\0';
+  } while(mpz_cmp_ui(ud_mp, 0) > 0);
 
   // flip back around
-  c3_y* result_ = (c3_y*)u3a_malloc(n*sizeof(c3_y));
-  int t = 0;
-  for (t = 0; t < counter; t++)
-  {
-    result_[t] = result[counter-t-1];
-  }
-  result_[counter] = '\0';
+  _reverse_cstr(result, counter);
+  result[counter] = '\0';
 
+  u3_noun final = u3i_bytes(counter, (c3_y*)result);
   mpz_clear(ud_mp);
-  mpz_clear(zero_mp);
-  u3_noun final = u3i_bytes(counter, (c3_y*)result_);
   u3a_free(result);
-  u3a_free(result_);
-  u3a_free(digit);
   return final;
 }
 
@@ -367,6 +367,52 @@ _print_uv(u3_atom uv)
 
 static
 u3_noun
+_print_uv_atom(u3_atom uv)
+{
+  mpz_t uv_mp;
+  u3r_mp(uv_mp, uv);
+
+  // allocate string with some breathing room for "."s, okay if too long
+  c3_w n = floor(_length_approx(uv_mp));
+  n = (5 * n / (3 * 4)) + 1;
+  c3_y* result = (c3_y*)u3a_malloc(n*sizeof(c3_y));
+  c3_y digit;
+
+  // number of characters printed "between" periods.
+  c3_i between = 0;
+  c3_i counter = 0;
+
+  // increase input refcount to be consumed in u3ka_div(), which will free each
+  // intermediary state.
+  u3k(uv);
+
+  do {
+    if (between == 5) {
+      result[counter] = '.';
+      between = 0;
+      counter++;
+    }
+
+    c3_y tig = u3qa_mod(uv, 32);
+    result[counter] = to_digit(tig);
+
+    between++;
+    counter++;
+    uv = u3ka_div(uv, 32);
+  } while (uv != 0);
+
+  // flip back around
+  _reverse_cstr(result, counter);
+  result[counter] = '\0';
+
+  u3_noun final = u3i_bytes(counter, (c3_y*)result);
+  mpz_clear(uv_mp);
+  u3a_free(result);
+  return final;
+}
+
+static
+u3_noun
 _print_uw(u3_atom uw)
 {
   // number of characters printed "between" periods.
@@ -390,6 +436,52 @@ _print_uw(u3_atom uw)
   } while (uw != 0);
 
   return u3nt('0', 'w', list);
+}
+
+static
+u3_noun
+_print_uw_atom(u3_atom uw)
+{
+  mpz_t uw_mp;
+  u3r_mp(uw_mp, uw);
+
+  // allocate string with some breathing room for "."s, okay if too long
+  c3_w n = floor(_length_approx(uw_mp));
+  n = (5 * n / (6 * 4)) + 1;
+  c3_y* result = (c3_y*)u3a_malloc(n*sizeof(c3_y));
+  c3_y digit;
+
+  // number of characters printed "between" periods.
+  c3_i between = 0;
+  c3_i counter = 0;
+
+  // increase input refcount to be consumed in u3ka_div(), which will free each
+  // intermediary state.
+  u3k(uw);
+
+  do {
+    if (between == 5) {
+      result[counter] = '.';
+      between = 0;
+      counter++;
+    }
+
+    c3_y tig = u3qa_mod(uw, 64);
+    result[counter] = to_w_digit(tig);
+
+    between++;
+    counter++;
+    uw = u3ka_div(uw, 64);
+  } while (uw != 0);
+
+  // flip back around
+  _reverse_cstr(result, counter);
+  result[counter] = '\0';
+
+  u3_noun final = u3i_bytes(counter, (c3_y*)result);
+  mpz_clear(uw_mp);
+  u3a_free(result);
+  return final;
 }
 
 u3_noun
@@ -446,19 +538,16 @@ u3we_scot(u3_noun cor)
       break;
 
     case c3__ud:
-      //tape = _print_ud(atom);
-      //fprintf(stderr,"\r\nud\r\n");
       tape = _print_ud_atom(atom);
       return tape;
-      break;
 
     case c3__uv:
-      tape = _print_uv(atom);
-      break;
+      tape = _print_uv_atom(atom);
+      return tape;
 
     case c3__uw:
-      tape = _print_uw(atom);
-      break;
+      tape = _print_uw_atom(atom);
+      return tape;
 
     default:
       return u3_none;
