@@ -536,7 +536,7 @@ u3we_scot(u3_noun cor)
       break;
 
     case 'p':
-      //return u3_none;
+      return u3_none;
       result = _print_p(cor, atom);
       break;
 
