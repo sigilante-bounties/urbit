@@ -5,7 +5,8 @@
 
 #include <ctype.h>
 
-static inline u3_noun
+static inline
+u3_noun
 _parse_ud(u3_noun a)
 {
   u3_weak pro;
@@ -18,7 +19,8 @@ _parse_ud(u3_noun a)
 }
 
 static
-u3_noun get_syllable(c3_c** cur_ptr, c3_c* one, c3_c* two, c3_c* three) {
+u3_noun
+get_syllable(c3_c** cur_ptr, c3_c* one, c3_c* two, c3_c* three) {
   if (islower((*cur_ptr)[0]) && islower((*cur_ptr)[1]) &&
       islower((*cur_ptr)[2])) {
     *one = (*cur_ptr)[0];
@@ -32,7 +34,8 @@ u3_noun get_syllable(c3_c** cur_ptr, c3_c* one, c3_c* two, c3_c* three) {
 }
 
 static
-u3_noun combine(u3_noun p, u3_noun q)
+u3_noun
+combine(u3_noun p, u3_noun q)
 {
   if (_(u3a_is_atom(p))) {
     return 0;
@@ -455,6 +458,7 @@ u3we_slaw(u3_noun cor)
                            u3x_sam_3, &txt, 0)) {
     return u3m_bail(c3__exit);
   }
+  return u3_none;
 
   switch (mod) {
     case c3__da:
