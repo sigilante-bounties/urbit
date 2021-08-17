@@ -448,12 +448,11 @@ _parse_tas(u3_noun txt) {
 u3_noun
 u3we_slaw(u3_noun cor)
 {
-  return u3_none;
   u3_noun mod;
   u3_noun txt;
 
   if (c3n == u3r_mean(cor, u3x_sam_2, &mod,
-                      u3x_sam_3, &txt, 0)) {
+                           u3x_sam_3, &txt, 0)) {
     return u3m_bail(c3__exit);
   }
 
@@ -467,7 +466,7 @@ u3we_slaw(u3_noun cor)
     case c3__ud:
       return _parse_ud(txt);
 
-      // %ta is used once in link.hoon. don't bother.
+    // %ta is used once in link.hoon. don't bother.
 
     case c3__tas:
       return _parse_tas(txt);
