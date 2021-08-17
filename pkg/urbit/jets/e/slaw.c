@@ -448,6 +448,7 @@ _parse_tas(u3_noun txt) {
 u3_noun
 u3we_slaw(u3_noun cor)
 {
+  return u3_none;
   u3_noun mod;
   u3_noun txt;
 
